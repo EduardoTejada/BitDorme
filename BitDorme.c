@@ -79,7 +79,7 @@ void gpio_irq_handler(uint gpio, uint32_t events) {
     }
 }
 
-/* Função de callback para o temporizador repetitivo */
+/* Função de callback para o temporizador repetitivo a cada 1 segundo */
 bool repeating_timer_callback(struct repeating_timer *t) {
     datetime_t rtc_info;
     rtc_get_datetime(&rtc_info); // Obtém o horário atual do RTC
@@ -151,12 +151,15 @@ void load_data(uint8_t* data_sono) {
 int selecaoHorario(int* horario, char* mensagem, bool voltar) {
     char hora_str[3];
     char minuto_str[3];
-    int posicao_joystick = 0;
-    int posicao_joystick_display = 0;
+
+    int posicao_joystick = 0; // Define se a hora ou o minuto seram alterados
+    int posicao_joystick_display = 0; // Mostra o "cursor" no display
+
+    int variacao = 0; // Salva a diferença na posição do joystick para somar no horário
+    bool changed = true; // Indica se houve mudança no joystick
+    
     button_press_count_a = 0;
     button_press_count_b = 0;
-    int variacao = 0;
-    bool changed = true;
 
     // Converte os valores do horário para strings
     sprintf(hora_str, "%d", horario[0]);
@@ -164,20 +167,27 @@ int selecaoHorario(int* horario, char* mensagem, bool voltar) {
 
     // Loop para seleção do horário
     while (button_press_count_b == 0) {
-        if (changed) { // Evitar que o display fique piscando
+        if (changed) { // Evita que o display fique piscando
             oled_clear();
             changed = false;
         }
+        /*
+        USE O JOYSTICK
+        vv
+        00:00
+        B PARA CONFIRMAR
+        A PARA VOLTAR
+        */
         oled_text(0, 0, "Use o Joystick");
         oled_text(0, 23, mensagem);
         oled_text(posicao_joystick_display, 30, "vv");
-        if (horario[0] < 10) {
+        if (horario[0] < 10) { // Garante que não fique aparecendo somente um digito
             oled_text(0, 35, "0");
             oled_text(8, 35, hora_str);
         } else {
             oled_text(0, 35, hora_str);
         }
-        if (horario[1] < 10) {
+        if (horario[1] < 10) { // Garante que não fique aparecendo somente um digito
             oled_text(25, 35, "0");
             oled_text(33, 35, minuto_str);
         } else {
@@ -185,25 +195,25 @@ int selecaoHorario(int* horario, char* mensagem, bool voltar) {
         }
 
         oled_text(0, 48, "B para confirmar");
-        if (voltar) oled_text(0, 56, "A para voltar");
+        if (voltar) oled_text(0, 56, "A para voltar"); // Não é mostrado no estado de seleção do horário ATUAL pois é o "primeiro estado" de configuração
         oled_show();
 
-        // Verifica a posição do joystick
-        if (get_joystick_horizontal_pos() == -2 && posicao_joystick != 0) {
+        // Verifica a posição do joystick e muda entre 0 e 1 (hora e minuto) e ativa a flag "changed"
+        if (get_joystick_horizontal_pos() == -2 && posicao_joystick != 0){
             posicao_joystick = 0;
             changed = true;
-        } else if (get_joystick_horizontal_pos() == 2 && posicao_joystick != 1) {
+        }
+        else if (get_joystick_horizontal_pos() == 2 && posicao_joystick != 1){
             posicao_joystick = 1;
             changed = true;
         }
-        if (posicao_joystick != 0) posicao_joystick_display = 25;
+        
+        if (posicao_joystick != 0) posicao_joystick_display = 25; // Ajusta a posição do cursor "vv"
         else posicao_joystick_display = 0;
 
         // Ajusta o horário com base no joystick
         variacao = get_joystick_vertical_pos();
         horario[posicao_joystick] += variacao;
-
-        if (variacao != 0) changed = true;
 
         // Limita os valores do horário
         if (horario[posicao_joystick] < 0) horario[posicao_joystick] = 0;
@@ -220,7 +230,7 @@ int selecaoHorario(int* horario, char* mensagem, bool voltar) {
             oled_clear();
             button_press_count_a = 0;
             button_press_count_b = 0;
-            return 0;
+            return 0; // Retorna 0 para voltar para o estado anterior em outra função
         }
         sleep_ms(170);
     }
@@ -228,14 +238,14 @@ int selecaoHorario(int* horario, char* mensagem, bool voltar) {
     oled_clear();
     button_press_count_a = 0;
     button_press_count_b = 0;
-    return 1;
+    return 1; // Retorna 1 para avançar para o próximo estado
 }
 
 /* Função para exibir a tela inicial */
 void telaInicial() {
-    oled_clear();
+    oled_clear(); // Limpa o display
     button_press_count_a = 0;
-    oled_draw();
+    oled_draw(); // Escreve o desenho no display
 
     // Aguarda o botão A ser pressionado
     while (button_press_count_a == 0) {
@@ -245,31 +255,31 @@ void telaInicial() {
     button_press_count_a = 0;
     state++; // Avança para o próximo estado
     oled_clear();
-    oled_init();
+    oled_init(); // Necessário por conta da função de desenho
 }
 
 /* Função para selecionar o horário atual */
 void selecionarHorarioAtual(int *horario) {
     selecaoHorario(horario, "Horario Atual", false);
-    state++;
+    state++; // Avança o estado
 }
 
 /* Função para selecionar o horário do alarme */
 void selecionarHorarioParaTocar(int *horario) {
     if (selecaoHorario(horario, "Horario Alarme", true))
-        state++;
+        state++; // Avança o estado
     else
-        state--;
+        state--; // Regride um estado
 }
 
 /* Função para calcular o tempo restante até o alarme */
 bool calculoTempo(int* horario_atual, int* horario_alarme, uint8_t* data_sono) {
-    int horario_faltando[2] = {0, 0};
+    int horario_faltando[2] = {0, 0}; // Diferença de horários
     char hora_faltando_str[3];
     char minuto_faltando_str[3];
-    bool mesmo_dia = false;
+    bool mesmo_dia = false; // Indica se o alarme irá tocar no mesmo dia ou no próximo dia
 
-    // Calcula o tempo restante
+    // Calcula a diferença entre os horários
     if (horario_atual[0] > horario_alarme[0] || (horario_atual[0] == horario_alarme[0] && horario_atual[1] > horario_alarme[1])) {
         horario_faltando[1] = (23 - horario_atual[0]) * 60;
         horario_faltando[1] += 60 - horario_atual[1];
@@ -279,7 +289,7 @@ bool calculoTempo(int* horario_atual, int* horario_alarme, uint8_t* data_sono) {
         mesmo_dia = true;
     }
 
-    // Aloca memória para os dados do sono
+    // Aloca memória para os dados do sono (baseado na quantidade de segundos que o usuário irá dormir)
     data_sono = (uint8_t*)calloc(60 * horario_alarme[1], sizeof(uint8_t));
 
     // Converte o tempo restante para horas e minutos
@@ -300,14 +310,14 @@ bool calculoTempo(int* horario_atual, int* horario_alarme, uint8_t* data_sono) {
     oled_text(0, 56, "A para voltar");
     oled_show();
 
-    state++;
-    return mesmo_dia;
+    state++; // Avança para o próximo estado
+    return mesmo_dia; // Retorna para a função principal (evita o uso de variáveis globais)
 }
 
 /* Função para confirmar o alarme */
 void confirmacaoAlarme(int* horario_atual, int* horario_alarme, bool mesmo_dia, uint8_t* data_sono) {
     if (button_press_count_a > 1) {
-        state -= 2; // Volta para o estado anterior
+        state -= 2; // Volta para o estado de seleção da hora
         button_press_count_a = 0;
         button_press_count_b = 0;
         free(data_sono);
@@ -315,7 +325,7 @@ void confirmacaoAlarme(int* horario_atual, int* horario_alarme, bool mesmo_dia, 
     else if (button_press_count_b > 0) {
         button_press_count_b = 0;
 
-        // Configura o horário atual no RTC
+        // Configura o horário atual no RTC (os únicos parâmetros que importam são horas, minutos e segundos)
         datetime_t t1 = {
             .year = 2025,
             .month = 01,
@@ -340,12 +350,13 @@ void confirmacaoAlarme(int* horario_atual, int* horario_alarme, bool mesmo_dia, 
             .sec = 00
         };
 
+        // Configura para despertar (gerar uma interrupção quando chegar na hora)
         rtc_set_alarm(&t_alarme, callback_despertador);
 
         // Inicia o temporizador para o monitoramento do sono
         add_repeating_timer_ms(MICROPHONE_SAMPLING_TIME, repeating_timer_callback, data_sono, &timer);
 
-        state++;
+        state++; // Avança o estado
     }
 }
 
@@ -403,12 +414,12 @@ int randint(int n) {
 
 /* Função para inicializar o jogo da memória */
 memoryGame* gameInit() {
-    memoryGame* game = (memoryGame*)malloc(sizeof(memoryGame));
+    memoryGame* game = (memoryGame*)malloc(sizeof(memoryGame)); // Aloca um espaço na memória para a estrutura
     game->flecha = 0;
     game->level = 0;
     game->substate = 0;
 
-    // Gera uma sequência aleatória de direções
+    // Gera uma sequência aleatória de direções (0, 1, 2, 3 são direções)
     for (int i = 0; i < LEVELS_MEMORY_GAME; i++) {
         game->sequencia[i] = randint(4);
     }
@@ -420,49 +431,49 @@ memoryGame* gameInit() {
 
 /* Função principal do jogo da memória */
 void jogoDaMemoria(memoryGame* game) {
-    int joy_z = 0;
+    int joy_z = 0; // Posição do joystick (-1 [centro], 0 [cima], 1 [baixo], 2 [direita], 3 [esquerda])
 
     oled_text(0, 0, "JOGO DA MEMORIA");
     oled_show();
 
+    // Submáquina de estados para o jogo
     switch (game->substate) {
         case 0:
-            // Exibe a sequência de direções
+            // Exibe a sequência de direções com base nas macros definidas em matriz_leds.c
             for (int i = 0; i <= game->level; i++) {
                 show_arrow(game->sequencia[i]);
             }
-            alarm_id = add_alarm_in_ms(10000, alarm_game_callback, (void *)game, false);
-            game->substate = 1;
-
+            alarm_id = add_alarm_in_ms(10000, alarm_game_callback, (void *)game, false); // Aciona um alarme para daqui 10 segundos
+            game->substate = 1; // Vai para o próximo subestado
         case 1:
             // Aguarda a entrada do usuário
             joy_z = get_joystick_position();
             if (joy_z != -1) {
-                npMatrix(lookup_table_indicator[joy_z]);
-                cancel_alarm(alarm_id);
+                npMatrix(lookup_table_indicator[joy_z]); // Caso houve movimento, mostra um feedback sobre a direção selecionada
+                cancel_alarm(alarm_id); // Cancela o alarme de 10 segundos
                 sleep_ms(500);
-                game->substate = 2;
+                game->substate = 2; // Passa para o próximo subestado (sem rodar o break para preservar o valor de joy_z)
             } else {
-                break;
+                break; // Caso não tiver movimento no joystick não roda o próximo subestado e o alarme ativa, fazendo com que o despertador toque de novo
             }
-
         case 2:
             npMatrix(NOTHING);
             // Verifica se a entrada do usuário está correta
             if (game->sequencia[game->flecha] == joy_z) {
-                if (game->flecha >= game->level) {
-                    game->level++;
-                    if (game->level >= LEVELS_MEMORY_GAME) {
+                if (game->flecha >= game->level) { // Verifica se é a ultima entrada para esse nível
+                    game->level++; // Se for, passa para o próximo níve
+                    if (game->level >= LEVELS_MEMORY_GAME) { // Se chegar ao fim dos níveis
                         oled_clear();
                         free(game);
                         state++; // Avança para o próximo estado
                     } else {
-                        game->flecha = 0;
-                        game->substate = 0;
+                        game->flecha = 0; // Como não acabou volta para a primeira flecha
+                        game->substate = 0; // e para o subestado 0
                     }
                 } else {
-                    game->substate = 1;
+                    game->substate = 1; // Como não é a última flecha, volta ao subestado 1 para receber uma nova entrada
                     game->flecha++;
+                    alarm_id = add_alarm_in_ms(10000, alarm_game_callback, (void *)game, false); // Aciona o alarme novamente
                 }
             } else {
                 // Exibe mensagem de derrota
@@ -482,16 +493,20 @@ void jogoDaMemoria(memoryGame* game) {
 
 /* Função para exibir os resultados do monitoramento */
 int resultadosMonitoramento(int pos_display, uint8_t* data_sono) {
-    int joy = get_joystick_horizontal_pos();
+    /*  Como o display oled só tem 127 pixels, caso o alarme rode por mais tempo que 127 segundos não é 
+        possível gerar todo o gráfico de uma vez só no display, por conta disso a variável pos_display
+        indica qual "parte" do gráfico está sendo mostrada (0, 1, ...) e é modificada pelo joystick
+    */
+    int joy = get_joystick_horizontal_pos(); // Lê o joystick
     if (joy > 0) {
         oled_clear();
-        pos_display = (pos_display >= counter / 127) ? counter / 127 : pos_display + 1;
-        oled_graph(data_sono, counter > 127 ? 127 : counter, pos_display * 127);
+        pos_display = (pos_display >= counter / 127) ? counter / 127 : pos_display + 1; // Garante que não passe do número máximo de telas que devem ser mostradas
+        oled_graph(data_sono, counter > 127 ? 127 : counter, pos_display * 127); // Caso o alarme tenha ficado menos de 127 segundos rodando não tera 127 pontos para exibir, então exibe COUNTER pontos
         oled_show();
         sleep_ms(500);
     } else if (joy < 0) {
         oled_clear();
-        pos_display = (pos_display == 0) ? 0 : pos_display - 1;
+        pos_display = (pos_display == 0) ? 0 : pos_display - 1; // Garante que não seja um número negativo
         oled_graph(data_sono, counter > 127 ? 127 : counter, pos_display * 127);
         oled_show();
         sleep_ms(500);
@@ -517,7 +532,7 @@ void button_init() {
     gpio_set_dir(BUTTON_PIN_B, GPIO_IN);
     gpio_pull_up(BUTTON_PIN_B);
 
-    // Configura interrupções para os botões
+    // Configura interrupções para os botões nas bordas de subida e descida
     gpio_set_irq_enabled_with_callback(BUTTON_PIN_A, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &gpio_irq_handler);
     gpio_set_irq_enabled_with_callback(BUTTON_PIN_B, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &gpio_irq_handler);
 
@@ -539,19 +554,21 @@ int main() {
     npInit();
     microphone_init();
 
+    // Variaveis para o RTC
     char datetime_buf[256];
     char *datetime_str = &datetime_buf[0];
 
+    // Variaveis para armazenar os horarios
     int horario_atual[2] = {0, 0};
     int horario_alarme[2] = {0, 0};
 
-    int display_pos = 0;
+    uint8_t* data_sono = NULL; // Ponteiro para salvar o endereço do array dos dados
     
-    uint8_t* data_sono = NULL;
-
     srand(time(NULL)); // Inicializa o gerador de números aleatórios
 
-    // Loop principal do sistema
+    int display_pos = 0; // Pagina atual do grafico (cada pagina contem 127 dados/pixels)
+
+    // Loop principal que roda a máquina de estados
     while (true) {
         switch (state) {
             case 0: // Tela inicial
