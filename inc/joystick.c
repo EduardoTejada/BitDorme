@@ -51,6 +51,7 @@ int get_joystick_vertical_pos(){
     return ((int) (get_joystick_y_percentage() / 20) - 2);
 }
 
+// Retorna -1, 0, 1, 2, 3 para joystick parado, cima, baixo, direita, esquerda, respectivamente
 int get_joystick_position(){
     int x = get_joystick_horizontal_pos();
     int y = get_joystick_vertical_pos();

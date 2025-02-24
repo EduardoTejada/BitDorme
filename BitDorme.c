@@ -58,8 +58,96 @@ absolute_time_t last_press_time_b;
 /* Contador para o monitoramento do sono */
 volatile int counter = 0;
 
+/* Cabeçalho das funções utilizadas */
+void gpio_irq_handler(uint gpio, uint32_t events); // Função de tratamento de interrupção dos botões
+bool repeating_timer_callback(struct repeating_timer *t); // Função de callback para o temporizador repetitivo a cada 1 segundo
+void callback_despertador(); // Função de callback para o RTC (despertador)
+int64_t alarm_game_callback(alarm_id_t id, void *user_data); // Função de callback para o alarme do jogo da memória
+void save_data(uint8_t* data_sono); // Função para salvar dados na memória flash
+void load_data(uint8_t* data_sono); // Função para carregar dados da memória flash
+int selecaoHorario(int* horario, char* mensagem, bool voltar); // Função para selecionar horário
+void telaInicial(); // Função para exibir a tela inicial
+void selecionarHorarioAtual(int *horario); // Função para selecionar o horário atual
+void selecionarHorarioParaTocar(int *horario); // Função para selecionar o horário do alarme
+bool calculoTempo(int* horario_atual, int* horario_alarme, uint8_t* data_sono); // Função para calcular o tempo restante até o alarme
+void confirmacaoAlarme(int* horario_atual, int* horario_alarme, bool mesmo_dia, uint8_t* data_sono); // Função para confirmar o alarme
+void monitorandoSono(); // Função para monitorar o sono
+void tocarAlarme(uint8_t* data_sono); // Função para tocar o alarme
+int randint(int n); // Função para gerar números aleatórios
+memoryGame* gameInit(); // Função para inicializar o jogo da memória
+void jogoDaMemoria(memoryGame* game); // Função principal do jogo da memória
+int resultadosMonitoramento(int pos_display, uint8_t* data_sono); // Função para exibir os resultados do monitoramento
+void button_init(); // Função para inicializar os botões
+
+
+/* Função principal */
+int main() {
+    stdio_init_all(); // Inicializa a comunicação serial
+
+    // Inicializa os periféricos
+    oled_init();
+    oled_clear();
+    joystick_init();
+    button_init();
+    buzzer_init();
+    rtc_init();
+    npInit();
+    microphone_init();
+
+    // Variaveis para o RTC
+    char datetime_buf[256];
+    char *datetime_str = &datetime_buf[0];
+
+    // Variaveis para armazenar os horarios
+    int horario_atual[2] = {0, 0};
+    int horario_alarme[2] = {0, 0};
+
+    uint8_t* data_sono = NULL; // Ponteiro para salvar o endereço do array dos dados
+    
+    srand(time(NULL)); // Inicializa o gerador de números aleatórios
+
+    int display_pos = 0; // Pagina atual do grafico (cada pagina contem 127 dados/pixels)
+
+    // Loop principal que roda a máquina de estados
+    while (true) {
+        switch (state) {
+            case 0: // Tela inicial
+                telaInicial();
+                break;
+            case 1: // Selecionar horário atual
+                selecionarHorarioAtual(horario_atual);
+                break;
+            case 2: // Selecionar horário do alarme
+                selecionarHorarioParaTocar(horario_alarme);
+                break;
+            case 3: // Calcular tempo até o alarme
+                bool mesmo_dia = calculoTempo(horario_atual, horario_alarme, data_sono);
+                break;
+            case 4: // Confirmar alarme
+                confirmacaoAlarme(horario_atual, horario_alarme, mesmo_dia, data_sono);
+                break;
+            case 5: // Monitorar sono
+                monitorandoSono();
+                break;
+            case 6: // Tocar alarme
+                tocarAlarme(data_sono);
+                break;
+            case 7: // Iniciar jogo da memória
+                memoryGame* game = gameInit();
+                break;
+            case 8: // Jogar jogo da memória
+                jogoDaMemoria(game);
+                break;
+            case 9: // Exibir resultados do monitoramento
+                display_pos = resultadosMonitoramento(display_pos, data_sono);
+                break;
+        }
+    }
+    return 0;
+}
+
 /* Função de tratamento de interrupção dos botões */
-void gpio_irq_handler(uint gpio, uint32_t events) {
+void gpio_irq_handler(uint gpio, uint32_t events){
     absolute_time_t now = get_absolute_time();
 
     // Verifica se o botão A foi pressionado
@@ -118,6 +206,7 @@ bool repeating_timer_callback(struct repeating_timer *t) {
 
     return true; // Continua o temporizador
 }
+
 
 /* Função de callback para o RTC (despertador) */
 void callback_despertador(){
@@ -538,70 +627,4 @@ void button_init() {
 
     last_press_time_a = get_absolute_time();
     last_press_time_b = get_absolute_time();
-}
-
-/* Função principal */
-int main() {
-    stdio_init_all(); // Inicializa a comunicação serial
-
-    // Inicializa os periféricos
-    oled_init();
-    oled_clear();
-    joystick_init();
-    button_init();
-    buzzer_init();
-    rtc_init();
-    npInit();
-    microphone_init();
-
-    // Variaveis para o RTC
-    char datetime_buf[256];
-    char *datetime_str = &datetime_buf[0];
-
-    // Variaveis para armazenar os horarios
-    int horario_atual[2] = {0, 0};
-    int horario_alarme[2] = {0, 0};
-
-    uint8_t* data_sono = NULL; // Ponteiro para salvar o endereço do array dos dados
-    
-    srand(time(NULL)); // Inicializa o gerador de números aleatórios
-
-    int display_pos = 0; // Pagina atual do grafico (cada pagina contem 127 dados/pixels)
-
-    // Loop principal que roda a máquina de estados
-    while (true) {
-        switch (state) {
-            case 0: // Tela inicial
-                telaInicial();
-                break;
-            case 1: // Selecionar horário atual
-                selecionarHorarioAtual(horario_atual);
-                break;
-            case 2: // Selecionar horário do alarme
-                selecionarHorarioParaTocar(horario_alarme);
-                break;
-            case 3: // Calcular tempo até o alarme
-                bool mesmo_dia = calculoTempo(horario_atual, horario_alarme, data_sono);
-                break;
-            case 4: // Confirmar alarme
-                confirmacaoAlarme(horario_atual, horario_alarme, mesmo_dia, data_sono);
-                break;
-            case 5: // Monitorar sono
-                monitorandoSono();
-                break;
-            case 6: // Tocar alarme
-                tocarAlarme(data_sono);
-                break;
-            case 7: // Iniciar jogo da memória
-                memoryGame* game = gameInit();
-                break;
-            case 8: // Jogar jogo da memória
-                jogoDaMemoria(game);
-                break;
-            case 9: // Exibir resultados do monitoramento
-                display_pos = resultadosMonitoramento(display_pos, data_sono);
-                break;
-        }
-    }
-    return 0;
 }

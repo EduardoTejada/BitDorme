@@ -13,4 +13,3 @@ void oled_show();
 void oled_clear();
 void oled_graph(uint8_t *pontos, int quantidade, int inicio);
 void oled_draw();
-void oled_line(uint8_t *pontos, int ponto);

@@ -18,6 +18,8 @@ npLED_t leds[LED_COUNT];
 PIO np_pio;
 uint sm;
 
+
+// Constantes usadas no código
 const npLED_t ALL_RED[5][5] = {
   {RED, RED, RED, RED, RED},
   {RED, RED, RED, RED, RED},
@@ -179,7 +181,9 @@ void npWrite() {
   sleep_us(100); // Espera 100us, sinal de RESET do datasheet.
 }
 
-
+/**
+ * Recebe uma matriz 5x5 e mostra ela na ordem correta na matriz de LEDs.
+ */
 void npMatrix(const npLED_t matrix[5][5]) {
   for(int i = 0; i < 5; i++)
     leds[i] = matrix[4][4-i];
@@ -199,7 +203,9 @@ void npMatrix(const npLED_t matrix[5][5]) {
   npWrite(); // Atualiza os LEDs
 }
 
-
+/**
+ * Mostra a flecha no jogo da memória e faz os delays
+ */
 void show_arrow(int which_arrow){
   npMatrix(lookup_table_arrow[which_arrow]);
   sleep_ms(500);

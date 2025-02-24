@@ -35,42 +35,34 @@ void oled_init(){
     calculate_render_area_buffer_length(&frame_area);
 }
 
+// Coloca um texto na posição dada
 void oled_text(int x, int y, char* text){
     ssd1306_draw_string(ssd, x, y, text);
 }
 
+// Atualiza o display
 void oled_show(){
     render_on_display(ssd, &frame_area);
 }
 
+// Zera o display
 void oled_clear(){
-    // zera o display inteiro
     memset(ssd, 0, ssd1306_buffer_length);
     render_on_display(ssd, &frame_area);
 }
 
-void oled_graph(uint8_t *pontos, int quantidade, int inicio){
+// Função responsável por gerar o gráfico
+void oled_graph(uint8_t *pontos, int quantidade, int inicio){ // Recebe um apontador para os pontos, a quantidade deles e em que indice começar
     for(int i = 1; i < quantidade; i++){
         int y0 = pontos[inicio + i-1];
         int y1 = pontos[inicio + i];
-        //y0 = (int) floor(((float)y0) * (63.0 / (float)max_value));
-        //y1 = (int) floor(((float)y1) * (63.0 / (float)max_value));
         if(y0 > 63) y0 = 63;
         if(y1 > 63) y1 = 63;
-        ssd1306_draw_line(ssd, i-1, 63-y0, i, 63-y1, true);
+        ssd1306_draw_line(ssd, i-1, 63-y0, i, 63-y1, true); // Desenha o gráfico por linhas entre os pontos, começando pelo segundo ponto puxando uma linha a partir do primeiro
     }
 }
 
-
-void oled_line(uint8_t *pontos, int ponto){
-    int y0 = pontos[ponto-1];
-    int y1 = pontos[ponto];
-    if(y0 > 63) y0 = 63;
-    if(y1 > 63) y1 = 63;
-    ssd1306_draw_line(ssd, ponto-1, 63-y0, ponto, 63-y1, true);
-}
-
-
+// Desenhar o bitmap
 void oled_draw(){
     const uint8_t bitmap_128x64[] = { 
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 

@@ -53,6 +53,8 @@
         "ctype.h": "c",
         "ssd1306_i2c.h": "c",
         "microphone_dma.h": "c",
-        "timer.h": "c"
+        "timer.h": "c",
+        "flash.h": "c",
+        "numbers": "c"
     }
 }

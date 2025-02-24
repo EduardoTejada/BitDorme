@@ -56,20 +56,3 @@ void play_alarm() {
     }
     sleep_ms(500); // Pequena pausa antes de repetir o alarme
 }
-
-void menu_beep(){
-    play_tone(150, 300);
-}
-
-void game_beeps(int style){
-    switch(style){
-        case 0: play_tone(150, 500); break;
-        case 1: play_tone(650, 500); break;
-        case 2: play_tone(700, 500); break;
-        case 3: play_tone(850, 500); break;
-        case 4: play_tone(900, 500); break;
-        case 5: play_tone(950, 500); break;
-        case 6: play_tone(1000, 500); break;
-        default: break;
-    }
-}
