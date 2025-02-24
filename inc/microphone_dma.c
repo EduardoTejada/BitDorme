@@ -32,13 +32,14 @@ uint8_t get_intensity(float v);
 float convert_to_db(float voltage_rms);
 
 
+// Habilitar o microfone
 void microphone_init(){
     adc_gpio_init(MIC_PIN);
     adc_init();
 }
 
+// Ler o valor do microfone
 int microphone_read(){
-
   adc_select_input(MIC_CHANNEL);
 
   adc_fifo_setup(
@@ -65,9 +66,6 @@ int microphone_read(){
 
     float soma = 0;
     for(int i = 0; i < COLETAS; i++){
-      // Realiza uma amostragem do microfone.
-      //sample_mic();
-
       // Pega a potência média da amostragem do microfone.
       float avg = sample_mic();//mic_power();
       avg = 2.f * abs(ADC_ADJUST(avg)); // Ajusta para intervalo de 0 a 3.3V. (apenas magnitude, sem sinal)
@@ -77,9 +75,9 @@ int microphone_read(){
       soma += decibels;
       // Envia a intensidade e a média das leituras do ADC por serial.
   }
-  dma_channel_unclaim(dma_channel);
+  dma_channel_unclaim(dma_channel); // Soltando a posse do canal DMA
   soma /= COLETAS;
-  soma = round(soma);
+  soma = round(soma); // Faz a média e arredonda
   return (int) soma;
 }
 
@@ -117,19 +115,6 @@ float sample_mic() {
 }
 
 /**
- * Calcula a potência média das leituras do ADC. (Valor RMS)
- */
-/*float mic_power(uint16_t * buffer[SAMPLES]) {
-  float avg = 0.f;
-
-  for (uint i = 0; i < SAMPLES; ++i)
-    avg += (*buffer[i]) * (*buffer[i]);
-  
-  avg /= SAMPLES;
-  return sqrt(avg);
-}*/
-
-/**
  * Calcula a intensidade do volume registrado no microfone, de 0 a 4, usando a tensão.
  */
 uint8_t get_intensity(float v) {
@@ -141,6 +126,7 @@ uint8_t get_intensity(float v) {
   return count;
 }
 
+// Converte de volts pra dB
 float convert_to_db(float voltage_rms) {
     if (voltage_rms <= V_REF) {
         return 0.0; // Evita log de zero ou valores negativos irreais
